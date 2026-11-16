@@ -1,0 +1,25 @@
+name: Business Radar
+on:
+  schedule:
+    - cron: "23 */6 * * *"      # best-effort: GitHub delay/skip kar sakta hai
+  workflow_dispatch:
+    inputs:
+      mode: { description: "probe | mca | news | all", default: "all" }
+      days_back: { description: "MCA days back (backfill ke liye 30-45)", default: "3" }
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: node radar/test.js
+      - run: node radar/collect.js ${{ inputs.mode || 'all' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          DATA_GOV_API_KEY: ${{ secrets.DATA_GOV_API_KEY }}
+          MCA_DAYS_BACK: ${{ inputs.days_back || '3' }}
+          MCA_DATE_FIELD: ${{ vars.MCA_DATE_FIELD || 'date_of_registration' }}
+          PROMOTE_MIN_SCORE: ${{ vars.PROMOTE_MIN_SCORE || '60' }}
