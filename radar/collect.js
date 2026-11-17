@@ -8,14 +8,15 @@ const DATE_FIELD = env("MCA_DATE_FIELD", "date_of_registration");
 const DAYS_BACK = Number(env("MCA_DAYS_BACK", "3")), MIN_SCORE = Number(env("PROMOTE_MIN_SCORE", "60"));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+const why = (e) => String(e && e.message) + (e && e.cause ? " [" + (e.cause.code || "") + " " + (e.cause.message || e.cause) + "]" : "");
 async function getJson(url, tries = 4) {
   for (let i = 1; i <= tries; i++) {
     try {
-      const res = await fetch(url, { headers: { "User-Agent": "DhaagaRadar/1.0" } });
+      const res = await fetch(url, { headers: { "User-Agent": "DhaagaRadar/1.0" }, signal: AbortSignal.timeout(20000) });
       if (res.status === 429 || res.status >= 500) throw new Error("HTTP " + res.status);
       if (!res.ok) throw new Error("HTTP " + res.status + " " + (await res.text()).slice(0, 200) + (res.status === 401 || res.status === 403 ? " -> HINT: DATA_GOV_API_KEY check karo" : res.status === 404 ? " -> HINT: resource ID galat ya is resource ka API enable nahi (data.gov.in par 'Request API')" : ""));
       return JSON.parse(await res.text());
-    } catch (e) { if (i === tries) throw e; await sleep(2000 * i * i); }
+    } catch (e) { if (i === tries) throw new Error(why(e) + " | host: " + new URL(String(url)).host); await sleep(2000 * i * i); }
   }
 }
 async function sb(path, method, body, prefer) {
@@ -42,6 +43,18 @@ function ogdUrl(date, offset) {
   u.searchParams.set("limit", "500"); u.searchParams.set("offset", String(offset));
   if (date) u.searchParams.set(`filters[${DATE_FIELD}]`, date);
   return u;
+}
+
+// Connectivity check: kaunsa server GitHub se reachable hai?
+async function ping() {
+  const targets = [["supabase", SB_URL + "/rest/v1/", { apikey: SB_KEY }], ["data.gov.in API", "https://api.data.gov.in/", {}],
+    ["data.gov.in website", "https://www.data.gov.in/", {}], ["gdelt", "https://api.gdeltproject.org/api/v2/doc/doc?query=test&mode=artlist&format=json&maxrecords=1", {}]];
+  for (const [name, url, headers] of targets) {
+    const t0 = Date.now();
+    try { const r = await fetch(url, { headers: { "User-Agent": "DhaagaRadar/1.0", ...headers }, signal: AbortSignal.timeout(15000) });
+      console.log(name.padEnd(22), "HTTP", r.status, (Date.now() - t0) + "ms"); }
+    catch (e) { console.log(name.padEnd(22), "FAILED", why(e), (Date.now() - t0) + "ms"); }
+  }
 }
 
 async function probe() {
@@ -105,7 +118,8 @@ async function news() {
 
 const mode = process.argv[2] || "all";
 try {
-  if (mode === "probe") await probe();
+  if (mode === "ping") await ping();
+  else if (mode === "probe") await probe();
   else if (mode === "mca") await mca();
   else if (mode === "news") await news();
   else { await mca(); await news(); }
