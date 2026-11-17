@@ -13,17 +13,23 @@ async function getJson(url, tries = 4) {
     try {
       const res = await fetch(url, { headers: { "User-Agent": "DhaagaRadar/1.0" } });
       if (res.status === 429 || res.status >= 500) throw new Error("HTTP " + res.status);
-      if (!res.ok) throw new Error("HTTP " + res.status + " " + (await res.text()).slice(0, 200));
+      if (!res.ok) throw new Error("HTTP " + res.status + " " + (await res.text()).slice(0, 200) + (res.status === 401 || res.status === 403 ? " -> HINT: DATA_GOV_API_KEY check karo" : res.status === 404 ? " -> HINT: resource ID galat ya is resource ka API enable nahi (data.gov.in par 'Request API')" : ""));
       return JSON.parse(await res.text());
     } catch (e) { if (i === tries) throw e; await sleep(2000 * i * i); }
   }
 }
 async function sb(path, method, body, prefer) {
-  const res = await fetch(SB_URL + "/rest/v1/" + path, { method,
-    headers: { apikey: SB_KEY, Authorization: "Bearer " + SB_KEY, "Content-Type": "application/json", ...(prefer ? { Prefer: prefer } : {}) },
-    body: body ? JSON.stringify(body) : undefined });
+  // Naye sb_secret_... keys JWT nahi hain: unhe sirf apikey header mein bhejna hota hai (Authorization mein nahi).
+  const headers = { apikey: SB_KEY, "Content-Type": "application/json", ...(prefer ? { Prefer: prefer } : {}) };
+  if (!SB_KEY.startsWith("sb_")) headers.Authorization = "Bearer " + SB_KEY;
+  const res = await fetch(SB_URL + "/rest/v1/" + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
   const t = await res.text();
-  if (!res.ok) throw new Error("Supabase " + res.status + ": " + t.slice(0, 300));
+  if (!res.ok) {
+    let hint = "";
+    if (res.status === 404 || /PGRST20|does not exist|schema cache/.test(t)) hint = " -> HINT: Supabase SQL Editor mein 7-radar-schema.sql run karo.";
+    if (res.status === 401 || res.status === 403) hint = " -> HINT: SUPABASE_SERVICE_KEY galat hai (service_role / sb_secret_ key chahiye, publishable nahi).";
+    throw new Error("Supabase " + res.status + ": " + t.slice(0, 300) + hint);
+  }
   return t ? JSON.parse(t) : null;
 }
 const rpc = (fn, args) => sb("rpc/" + fn, "POST", args);
