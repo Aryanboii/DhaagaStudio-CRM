@@ -13,4 +13,12 @@ assert.equal(s.category, "Restaurants"); assert.equal(s.lead_score, 80); assert.
 const old = scoreMca({ ...b, reg_date: "2020-01-01", capital: 0, status: "" }, today);
 assert.ok(old.lead_score < 60 && old.verification_status === "unverified");
 assert.equal(categoryFor("Skyline Realty Developers"), "Real Estate");
+const real = { CIN: "U27900GJ2025PTC166696", CompanyName: "EMSGLOB TECHNOLOGIES PRIVATE LIMITED", CompanyClass: "Private", PaidupCapital: "500000.00",
+  CompanyRegistrationdate_date: "2025-08-26", Registered_Office_Address: "SHOP-G1 SHIVAM AVENUE,Karjan,Vadodara,Gujarat,391240-India",
+  CompanyStatus: "Active", CompanyStateCode: "gujarat", CompanyIndustrialClassification: "Manufacturing (Machinery and Equipments)" };
+const rb = normalizeMca(real);
+assert.equal(rb.reg_date, "2025-08-26"); assert.equal(rb.state, "gujarat"); assert.equal(rb.klass, "Private"); assert.equal(rb.city, "");
+assert.equal(scoreMca(rb, today).category, "MSME Businesses");
+const noida = normalizeMca({ ...real, Registered_Office_Address: "Plot 4,Sector 62,Noida,Uttar Pradesh,201301-India", CompanyRegistrationdate_date: "2026-11-10", CompanyStateCode: "uttar pradesh" });
+assert.equal(noida.city, "Noida"); assert.ok(scoreMca(noida, today).lead_score >= 60);
 console.log("all tests passed");

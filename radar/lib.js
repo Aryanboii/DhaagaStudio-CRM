@@ -24,7 +24,7 @@ export function categoryFor(text) {
   if (/restaurant|cafe|food|catering|hotel|bakery|kitchen|beverage/.test(t)) return "Restaurants";
   if (/real estate|realty|propert|builder|developer|housing|construction|infra/.test(t)) return "Real Estate";
   if (/health|medical|clinic|hospital|pharma|dental|diagnostic|wellness/.test(t)) return "Doctors / Clinics";
-  if (/software|technolog|\bit\b|digital|consult|solutions|systems|tech|data|media|marketing|advert/.test(t)) return "New Firms";
+  if (/software|technolog|\bit\b|digital|consult|solutions|systems|tech|data|media|marketing|advert|business services|services/.test(t)) return "New Firms";
   if (/trad|retail|manufactur|export|import|garment|textile|education|coaching|logistic|transport|engineering|industr/.test(t)) return "MSME Businesses";
   return "New Businesses";
 }
@@ -46,11 +46,11 @@ export function normalizeMca(raw) {
   return {
     name, address, city: cityFromAddress(address),
     cin: pick(r, "cin", "corporate_identification_number", "corporate_identification_no").toUpperCase(),
-    reg_date: parseDate(pick(r, "date_of_registration", "dateofregistration", "registration_date", "date_of_incorporation")),
-    state: pick(r, "registered_state", "state", "companystate"),
+    reg_date: parseDate(pick(r, "companyregistrationdate_date", "date_of_registration", "dateofregistration", "registration_date", "date_of_incorporation")),
+    state: pick(r, "companystatecode", "registered_state", "state", "companystate"),
     status: pick(r, "company_status", "status", "companystatus"),
-    activity: pick(r, "principal_business_activity", "principalbusinessactivity", "industrial_classification", "nic_description"),
-    klass: pick(r, "company_class", "class"),
+    activity: pick(r, "companyindustrialclassification", "principal_business_activity", "principalbusinessactivity", "industrial_classification", "nic_description"),
+    klass: pick(r, "companyclass", "company_class", "class"),
     capital: Number(pick(r, "paidup_capital", "paid_up_capital", "paidupcapital")) || 0,
   };
 }
@@ -65,7 +65,8 @@ export function scoreMca(b, today = new Date()) {
   else if (days != null && days >= 0 && days <= 90) { s += 20; why.push("pichle 90 din mein registered"); }
   else if (days != null && days >= 0 && days <= 180) { s += 10; why.push("pichle 6 mahine mein registered"); }
   if (PRIORITY_CITIES.includes(b.city)) { s += 10; why.push("priority city: " + b.city); }
-  const category = categoryFor(b.activity + " " + b.name);
+  const byActivity = categoryFor(b.activity); // MCA industry classification pehle, naam baad mein
+  const category = byActivity !== "New Businesses" ? byActivity : categoryFor(b.name);
   if (["Restaurants", "Real Estate", "Doctors / Clinics"].includes(category)) { s += 15; why.push("consumer-facing industry (" + category + ")"); }
   else if (["New Firms", "MSME Businesses"].includes(category)) { s += 8; why.push("category: " + category); }
   else s += 5;
