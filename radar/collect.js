@@ -57,6 +57,7 @@ async function ping() {
   }
 }
 
+<<<<<<< HEAD
 // Dataset kitna taaza hai? Peeche ki taraf dates scan karke sabse nayi registration date dhundta hai.
 async function fresh() {
   if (!OGD_KEY) throw new Error("DATA_GOV_API_KEY set karo");
@@ -71,6 +72,8 @@ async function fresh() {
   console.log(latest ? "SABSE NAYI registration date jo dataset mein mili: " + latest + " (" + Math.round((Date.now() - new Date(latest)) / 864e5) + " din purani)" : "Pichle 450 din mein koi record nahi mila -> field name/format check karo");
 }
 
+=======
+>>>>>>> 6f1e4204d844e5e9b40b4f771e563d168d469a1f
 async function probe() {
   if (!OGD_KEY) throw new Error("DATA_GOV_API_KEY set karo");
   const j = await getJson(ogdUrl("", 0).toString().replace("limit=500", "limit=5"));
@@ -133,7 +136,10 @@ async function news() {
 const mode = process.argv[2] || "all";
 try {
   if (mode === "ping") await ping();
+<<<<<<< HEAD
   else if (mode === "fresh") await fresh();
+=======
+>>>>>>> 6f1e4204d844e5e9b40b4f771e563d168d469a1f
   else if (mode === "probe") await probe();
   else if (mode === "mca") await mca();
   else if (mode === "news") await news();
